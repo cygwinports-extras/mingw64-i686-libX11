@@ -1,0 +1,65 @@
+--- origsrc/libX11-1.5.0/src/CrGlCur.c	2012-06-02 01:37:19.000000000 -0500
++++ src/libX11-1.5.0/src/CrGlCur.c	2012-10-14 21:27:24.330702400 -0500
+@@ -31,30 +31,33 @@ in this Software without prior written a
+ 
+ #ifdef USE_DYNAMIC_XCURSOR
+ 
+-#ifdef __UNIXOS2__
+-#define RTLD_LAZY 1
+-#define LIBXCURSOR "Xcursor.dll"
+-#endif
+ #include <stdio.h>
+ #include <string.h>
+ #if defined(hpux)
+ #include <dl.h>
++#elif defined(_WIN32)
++#include <X11/Xwindows.h>
+ #else
+ #include <dlfcn.h>
+ #endif
+ #include "Cr.h"
+ 
+-#ifdef __CYGWIN__
+-#define LIBXCURSOR "cygXcursor-1.dll"
+-#endif
+-
+ #if defined(hpux)
+ typedef shl_t	XModuleType;
++#elif defined(_WIN32)
++typedef HMODULE XModuleType;
+ #else
+ typedef void *XModuleType;
+ #endif
+ 
+-#ifndef LIBXCURSOR
++#ifdef __UNIXOS2__
++#define RTLD_LAZY 1
++#define LIBXCURSOR "Xcursor.dll"
++#elif defined(__CYGWIN__)
++#define LIBXCURSOR "cygXcursor-1.dll"
++#elif defined(_WIN32)
++#define LIBXCURSOR "libXcursor-1.dll"
++#else
+ #define LIBXCURSOR "libXcursor.so.1"
+ #endif
+ 
+@@ -70,6 +73,8 @@ open_library (void)
+     {
+ #if defined(hpux)
+ 	module = shl_load(library, BIND_DEFERRED, 0L);
++#elif defined(_WIN32)
++	module = LoadLibrary(library);
+ #else
+ 	module =  dlopen(library, RTLD_LAZY);
+ #endif
+@@ -105,6 +110,10 @@ fetch_symbol (XModuleType module, const
+     if(getsyms_cnt > 0) {
+         free(symbols);
+     }
++#elif defined(_WIN32)
++    result = GetProcAddress (module, symbol);
++    if (!result)
++	result = GetProcAddress (module, under_symbol);
+ #else
+     result = dlsym (module, symbol);
+     if (!result)
